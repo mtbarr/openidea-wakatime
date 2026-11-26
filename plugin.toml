@@ -1,6 +1,6 @@
 id = "community.wakatime"
 name = "WakaTime"
-version = "0.1.0"
+version = "0.1.1"
 description = "Tracks your coding time with WakaTime (uses the wakatime-cli and ~/.wakatime.cfg)."
 authors = []
 license = "MIT"

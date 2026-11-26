@@ -8,7 +8,7 @@ use openidea_plugin::{
 
 const CLI: &str = "wakatime-cli";
 const STATUS_ID: &str = "wakatime";
-const DASHBOARD: &str = "https://wakatime.com/dashboard";
+const DEFAULT_DASHBOARD: &str = "https://wakatime.com/dashboard";
 /// Same rule as the official plugins: a heartbeat on every save, on a file
 /// switch, or after this many seconds on the same file.
 const HEARTBEAT_EVERY: u64 = 120;
@@ -43,6 +43,16 @@ fn is_absolute(path: &str) -> bool {
 fn join(root: &str, rel: &str) -> String {
     let sep = if root.contains('\\') { '\\' } else { '/' };
     format!("{}{sep}{}", root.trim_end_matches(['/', '\\']), rel.trim_start_matches(['/', '\\']))
+}
+
+/// The dashboard of the server in `api_url` (a self-hosted wakapi or WakaTime).
+fn dashboard_url(api_url: &str) -> String {
+    let url = api_url.trim().trim_end_matches('/');
+    if url.is_empty() || url.contains("api.wakatime.com") || url.contains("://wakatime.com") {
+        return DEFAULT_DASHBOARD.into();
+    }
+    let base = url.find("/api").map_or(url, |i| &url[..i]);
+    format!("{base}/")
 }
 
 fn status_text(today: &str) -> String {
@@ -172,7 +182,10 @@ impl Plugin for WakaTime {
     fn run_command(&mut self, id: &str, _ctx: &Invocation, _arg: Option<&str>) -> Result<Option<String>, Error> {
         match id {
             "dashboard" => {
-                host::open_url(DASHBOARD)?;
+                // The server comes from ~/.wakatime.cfg, as for the heartbeats.
+                let cmd = Command::new(CLI).args(["--config-read", "api_url"]);
+                let api_url = host::run_command(&cmd, None, None).map(|o| o.stdout).unwrap_or_default();
+                host::open_url(&dashboard_url(&api_url))?;
                 Ok(None)
             }
             "refresh" => {
@@ -225,6 +238,14 @@ mod tests {
         assert!(!is_absolute("src/a.rs"));
         assert_eq!(join("C:\\p\\", "src/a.rs"), "C:\\p\\src/a.rs");
         assert_eq!(join("/p", "src/a.rs"), "/p/src/a.rs");
+    }
+
+    #[test]
+    fn dashboard_follows_api_url() {
+        assert_eq!(dashboard_url("https://waka.seyn.net/api\n"), "https://waka.seyn.net/");
+        assert_eq!(dashboard_url("https://waka.example.com/api/v1/"), "https://waka.example.com/");
+        assert_eq!(dashboard_url("https://api.wakatime.com/api/v1"), DEFAULT_DASHBOARD);
+        assert_eq!(dashboard_url(""), DEFAULT_DASHBOARD);
     }
 
     #[test]
