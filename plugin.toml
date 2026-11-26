@@ -1,0 +1,35 @@
+id = "community.wakatime"
+name = "WakaTime"
+version = "0.1.0"
+description = "Tracks your coding time with WakaTime (uses the wakatime-cli and ~/.wakatime.cfg)."
+authors = []
+license = "MIT"
+categories = ["tools"]
+engines.openidea = "^1.15"
+wasm = "dist/plugin.wasm"
+# Starts with the IDE so it can subscribe to edits; file events and the
+# 5-minute schedule wake it again after it is reclaimed while idle.
+activation = [
+    "on-startup-finished",
+    "on-schedule:300",
+    "on-event:file-opened",
+    "on-event:file-saved",
+    "on-event:editor-focused",
+    "on-command:*",
+]
+
+[capabilities]
+# events:                  file opened / saved / focused / edited
+# project.read:            the project folder sent to WakaTime
+# process:wakatime-cli:    sends the heartbeats (must be on PATH when you allow it)
+required = ["events", "project.read", "process:wakatime-cli"]
+
+[[contributes.commands]]
+id = "dashboard"
+title = "WakaTime: Open Dashboard"
+category = "WakaTime"
+
+[[contributes.commands]]
+id = "refresh"
+title = "WakaTime: Refresh Today's Time"
+category = "WakaTime"
